@@ -194,6 +194,10 @@ const extractUrl = (text: string): string => {
   const longMatch = text.match(douyinLongUrlRegex)
   if (longMatch) return longMatch[0]
 
+  const iesdouyinUrlRegex = /https?:\/\/www\.iesdouyin\.com\/[^\s\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]+/
+  const iesMatch = text.match(iesdouyinUrlRegex)
+  if (iesMatch) return iesMatch[0]
+
   const tiktokUrlRegex = /https?:\/\/(?:vt\.tiktok\.com|www\.tiktok\.com)\/[^\s\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]+/
   const tiktokMatch = text.match(tiktokUrlRegex)
   if (tiktokMatch) return tiktokMatch[0]
@@ -202,9 +206,18 @@ const extractUrl = (text: string): string => {
   const generalMatch = text.match(generalUrlRegex)
   if (generalMatch) return generalMatch[0]
 
-  const urlRegex = /https?:\/\/[^\s]+/
-  const match = text.match(urlRegex)
-  return match ? match[0] : text
+  return text.trim()
+}
+
+const isShareCodeText = (text: string): boolean => {
+  if (/https?:\/\//.test(text)) return false
+  return (
+    /[a-zA-Z0-9@._]+\s*[a-zA-Z0-9]+:\/\s/.test(text) ||
+    text.includes('复制此链接') ||
+    text.includes('打开Dou音') ||
+    text.includes('打开抖音') ||
+    text.includes('直接观看')
+  )
 }
 
 const handleParse = async () => {
@@ -213,7 +226,21 @@ const handleParse = async () => {
     return
   }
 
-  const url = extractUrl(inputUrl.value.trim())
+  const trimmedInput = inputUrl.value.trim()
+
+  if (isShareCodeText(trimmedInput) && !/https?:\/\//.test(trimmedInput)) {
+    parseError.value =
+      '检测到抖音口令分享文本，但未找到链接地址。\n' +
+      '请在抖音中使用「复制链接」而非「复制口令」来分享。\n' +
+      '有效格式示例：包含 https://v.douyin.com/xxx/ 的分享文本'
+    ElMessage.warning({
+      message: '请使用「复制链接」分享，当前为口令格式',
+      duration: 5000,
+    })
+    return
+  }
+
+  const url = extractUrl(trimmedInput)
   parsing.value = true
   parseError.value = ''
   videoInfo.value = null
