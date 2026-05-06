@@ -3,10 +3,16 @@ import { createWriteStream, existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import axios from 'axios'
 import * as https from 'https'
+import { HttpsProxyAgent } from 'https-proxy-agent'
+
+const proxyUrl = process.env.HTTPS_PROXY || process.env.HTTP_PROXY || process.env.https_proxy || process.env.http_proxy
+const proxyAgent = proxyUrl ? new HttpsProxyAgent(proxyUrl) : undefined
 
 const httpsAgent = new https.Agent({
   rejectUnauthorized: false,
 })
+
+const axiosAgent = proxyAgent || httpsAgent
 
 interface DownloadItem {
   id: string
@@ -78,7 +84,7 @@ export class DownloadManager {
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           Referer: 'https://www.douyin.com/',
         },
-        httpsAgent,
+        httpsAgent: axiosAgent,
       })
 
       const totalBytes = parseInt(String(response.headers['content-length'] || '0'), 10)

@@ -178,12 +178,15 @@ import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useAppStore } from '@/stores/app'
 import type { VideoItem } from '@/stores/app'
+import { browserParse } from '@/utils/browserParser'
 
 const store = useAppStore()
 const inputUrl = ref('')
 const parsing = ref(false)
 const videoInfo = ref<VideoItem | null>(null)
 const parseError = ref('')
+
+const isElectron = !!window.electronAPI
 
 const extractUrl = (text: string): string => {
   const douyinShortUrlRegex = /https?:\/\/v\.douyin\.com\/[a-zA-Z0-9]+\/?/
@@ -246,7 +249,14 @@ const handleParse = async () => {
   videoInfo.value = null
 
   try {
-    const result = await window.electronAPI?.parseUrl(url)
+    let result: any = null
+
+    if (isElectron) {
+      result = await window.electronAPI.parseUrl(url)
+    } else {
+      result = await browserParse(url)
+    }
+
     if (result?.success) {
       videoInfo.value = result.data
       store.currentVideo = result.data

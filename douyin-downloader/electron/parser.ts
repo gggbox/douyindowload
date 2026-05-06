@@ -1,9 +1,15 @@
 import axios from 'axios'
 import * as https from 'https'
+import { HttpsProxyAgent } from 'https-proxy-agent'
+
+const proxyUrl = process.env.HTTPS_PROXY || process.env.HTTP_PROXY || process.env.https_proxy || process.env.http_proxy
+const proxyAgent = proxyUrl ? new HttpsProxyAgent(proxyUrl) : undefined
 
 const httpsAgent = new https.Agent({
   rejectUnauthorized: false,
 })
+
+const axiosAgent = proxyAgent || httpsAgent
 
 const headers: Record<string, string> = {
   'User-Agent':
@@ -133,7 +139,7 @@ export class DouyinParser {
           ...headers,
           Cookie: this.cookie,
         },
-        httpsAgent,
+        httpsAgent: axiosAgent,
         validateStatus: (status) => status >= 200 && status < 400,
       })
 
@@ -159,7 +165,7 @@ export class DouyinParser {
           ...headers,
           Cookie: this.cookie,
         },
-        httpsAgent,
+        httpsAgent: axiosAgent,
         validateStatus: (status) => status >= 200 && status < 400,
       })
 
@@ -185,7 +191,7 @@ export class DouyinParser {
           ...headers,
           Cookie: this.cookie,
         },
-        httpsAgent,
+        httpsAgent: axiosAgent,
         validateStatus: () => true,
       })
 
@@ -227,7 +233,7 @@ export class DouyinParser {
           ...headers,
           Cookie: this.cookie,
         },
-        httpsAgent,
+        httpsAgent: axiosAgent,
         timeout: 10000,
       })
 
@@ -247,7 +253,7 @@ export class DouyinParser {
           Cookie: this.cookie,
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         },
-        httpsAgent,
+        httpsAgent: axiosAgent,
         timeout: 10000,
       })
 
@@ -279,14 +285,30 @@ export class DouyinParser {
       const response = await axios.get(iesUrl, {
         headers: {
           ...headers,
-          Cookie: this.cookie,
+          'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         },
-        httpsAgent,
+        httpsAgent: axiosAgent,
+        maxRedirects: 5,
         timeout: 10000,
       })
 
       const html = typeof response.data === 'string' ? response.data : ''
+
+      const routerDataMatch = html.match(/window\._ROUTER_DATA\s*=\s*(\{.+?\})\s*<\/script>/)
+      if (routerDataMatch) {
+        try {
+          const jsonData = JSON.parse(routerDataMatch[1])
+          const videoInfoRes = jsonData?.loaderData?.['video_(id)/page']?.videoInfoRes
+          const itemList = videoInfoRes?.item_list
+          if (itemList && itemList.length > 0) {
+            return this.parseVideoDetail(itemList[0])
+          }
+        } catch {
+          // parse error
+        }
+      }
+
       const renderDataMatch = html.match(/<script\s+id="RENDER_DATA"\s+type="application\/json">([^<]+)<\/script>/)
       if (renderDataMatch) {
         const decoded = decodeURIComponent(renderDataMatch[1])
@@ -394,7 +416,7 @@ export class DouyinParser {
         ...headers,
         Cookie: this.cookie,
       },
-      httpsAgent,
+      httpsAgent: axiosAgent,
     })
 
     const data = response.data
@@ -430,7 +452,7 @@ export class DouyinParser {
         ...headers,
         Cookie: this.cookie,
       },
-      httpsAgent,
+      httpsAgent: axiosAgent,
     })
 
     const data = response.data
