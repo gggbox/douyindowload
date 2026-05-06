@@ -1,0 +1,133 @@
+:root {
+  --bg-primary: #0f0f1a;
+  --bg-secondary: #1a1a2e;
+  --bg-tertiary: #252540;
+  --bg-card: #1e1e36;
+  --text-primary: #e8e8f0;
+  --text-secondary: #a0a0b8;
+  --text-muted: #6b6b80;
+  --accent-primary: #fe2c55;
+  --accent-secondary: #25f4ee;
+  --accent-gradient: linear-gradient(135deg, #fe2c55, #ff6b81);
+  --border-color: #2a2a45;
+  --shadow-color: rgba(0, 0, 0, 0.3);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: 'PingFang SC', 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--bg-tertiary);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+.el-menu {
+  border-right: none !important;
+}
+
+.page-container {
+  height: 100%;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.page-header {
+  margin-bottom: 24px;
+
+  .page-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+  }
+
+  .page-desc {
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
+}
+
+.card-hover {
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px var(--shadow-color);
+  }
+}
+
+.gradient-text {
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.douyin-btn {
+  background: var(--accent-gradient) !important;
+  border: none !important;
+  color: white !important;
+  font-weight: 600 !important;
+
+  &:hover {
+    opacity: 0.9;
+  }
+}
+
+.glass-card {
+  background: rgba(30, 30, 54, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+}
+
+.el-input__wrapper,
+.el-textarea__inner {
+  background-color: var(--bg-tertiary) !important;
+  box-shadow: none !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-primary) !important;
+
+  &:focus,
+  &:hover {
+    border-color: var(--accent-primary) !important;
+  }
+}
+
+.el-input__inner {
+  color: var(--text-primary) !important;
+
+  &::placeholder {
+    color: var(--text-muted) !important;
+  }
+}
