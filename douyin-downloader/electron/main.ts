@@ -120,6 +120,35 @@ ipcMain.handle('fetch-video-list', async (_event, params: { secUid: string; curs
   }
 })
 
+ipcMain.handle('set-cookie', (_event, cookie: string) => {
+  parser.setCookie(cookie)
+  return { success: true }
+})
+
+ipcMain.handle('get-cookie', () => {
+  return { success: true, data: parser.getCookie() }
+})
+
+ipcMain.handle('window-minimize', () => {
+  mainWindow?.minimize()
+})
+
+ipcMain.handle('window-maximize', () => {
+  if (mainWindow?.isMaximized()) {
+    mainWindow.unmaximize()
+  } else {
+    mainWindow?.maximize()
+  }
+})
+
+ipcMain.handle('window-close', () => {
+  mainWindow?.close()
+})
+
+ipcMain.handle('window-is-maximized', () => {
+  return mainWindow?.isMaximized() || false
+})
+
 downloadManager.on('progress', (data) => {
   mainWindow?.webContents.send('download-progress', data)
 })

@@ -81,7 +81,7 @@ export class DownloadManager {
         httpsAgent,
       })
 
-      const totalBytes = parseInt(response.headers['content-length'] || '0', 10)
+      const totalBytes = parseInt(String(response.headers['content-length'] || '0'), 10)
       item.totalBytes = totalBytes
 
       const writer = createWriteStream(filePath)

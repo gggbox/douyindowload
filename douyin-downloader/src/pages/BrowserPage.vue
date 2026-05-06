@@ -50,13 +50,16 @@
 
     <div class="browser-content">
       <div class="webview-container" ref="webviewContainer">
-        <iframe
-          ref="browserFrame"
+        <webview
+          ref="browserWebview"
           :src="displayUrl"
-          class="browser-iframe"
-          sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
-          @load="onPageLoad"
-        ></iframe>
+          class="browser-webview"
+          allowpopups
+          :useragent="userAgent"
+          @did-navigate="onNavigate"
+          @did-navigate-in-page="onNavigateInPage"
+          @did-finish-load="onPageLoad"
+        ></webview>
       </div>
 
       <div class="side-panel" :class="{ open: sidePanelOpen }">
@@ -134,24 +137,6 @@
         </div>
       </div>
     </div>
-
-    <el-dialog v-model="historyDialogVisible" title="浏览历史" width="500px">
-      <el-timeline>
-        <el-timeline-item
-          v-for="(item, index) in browseHistory"
-          :key="index"
-          :timestamp="item.time"
-          placement="top"
-        >
-          <el-card shadow="hover" @click="navigateTo(item.url)" style="cursor: pointer">
-            <p>{{ item.title || item.url }}</p>
-          </el-card>
-        </el-timeline-item>
-      </el-timeline>
-      <template #footer>
-        <el-button @click="browseHistory = []; historyDialogVisible = false">清空历史</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
@@ -164,15 +149,15 @@ import type { VideoItem } from '@/stores/app'
 const store = useAppStore()
 const currentUrl = ref('https://www.douyin.com')
 const displayUrl = ref('https://www.douyin.com')
-const browserFrame = ref<HTMLIFrameElement | null>(null)
+const browserWebview = ref<any>(null)
 const webviewContainer = ref<HTMLElement | null>(null)
 const canGoBack = ref(false)
 const canGoForward = ref(false)
 const parsing = ref(false)
 const sidePanelOpen = ref(false)
 const parsedVideo = ref<VideoItem | null>(null)
-const historyDialogVisible = ref(false)
-const browseHistory = ref<Array<{ url: string; title: string; time: string }>>([])
+
+const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 
 const navigateTo = (url: string) => {
   if (!url) return
@@ -189,41 +174,23 @@ const navigateTo = (url: string) => {
   currentUrl.value = targetUrl
   displayUrl.value = targetUrl
   canGoBack.value = true
-
-  browseHistory.value.unshift({
-    url: targetUrl,
-    title: targetUrl,
-    time: new Date().toLocaleString('zh-CN'),
-  })
 }
 
 const goBack = () => {
-  if (browserFrame.value) {
-    try {
-      browserFrame.value.contentWindow?.history.back()
-      canGoForward.value = true
-    } catch {
-      // cross-origin
-    }
+  if (browserWebview.value) {
+    browserWebview.value.goBack()
   }
 }
 
 const goForward = () => {
-  if (browserFrame.value) {
-    try {
-      browserFrame.value.contentWindow?.history.forward()
-    } catch {
-      // cross-origin
-    }
+  if (browserWebview.value) {
+    browserWebview.value.goForward()
   }
 }
 
 const refreshPage = () => {
-  if (browserFrame.value) {
-    displayUrl.value = ''
-    setTimeout(() => {
-      displayUrl.value = currentUrl.value
-    }, 50)
+  if (browserWebview.value) {
+    browserWebview.value.reload()
   }
 }
 
@@ -231,15 +198,21 @@ const goToDouyin = () => {
   navigateTo('https://www.douyin.com')
 }
 
-const onPageLoad = () => {
-  try {
-    const frameUrl = browserFrame.value?.contentWindow?.location.href
-    if (frameUrl && frameUrl !== 'about:blank') {
-      currentUrl.value = frameUrl
-    }
-  } catch {
-    // cross-origin, keep current url
+const onNavigate = (event: any) => {
+  currentUrl.value = event.url
+  canGoBack.value = browserWebview.value?.canGoBack() || false
+  canGoForward.value = browserWebview.value?.canGoForward() || false
+}
+
+const onNavigateInPage = (event: any) => {
+  if (event.url) {
+    currentUrl.value = event.url
   }
+}
+
+const onPageLoad = () => {
+  canGoBack.value = browserWebview.value?.canGoBack() || false
+  canGoForward.value = browserWebview.value?.canGoForward() || false
 }
 
 const parseCurrentPage = async () => {
@@ -440,7 +413,7 @@ const formatNumber = (num: number): string => {
   flex: 1;
   position: relative;
 
-  .browser-iframe {
+  .browser-webview {
     width: 100%;
     height: 100%;
     border: none;

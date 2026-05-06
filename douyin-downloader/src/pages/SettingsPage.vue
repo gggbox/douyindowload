@@ -138,7 +138,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useAppStore } from '@/stores/app'
 
@@ -151,6 +151,19 @@ const retryCount = ref(3)
 const cookie = ref('')
 const theme = ref('dark')
 const primaryColor = ref('#fe2c55')
+
+onMounted(async () => {
+  const savedCookie = localStorage.getItem('douyin_cookie')
+  if (savedCookie) {
+    cookie.value = savedCookie
+    await window.electronAPI?.setCookie(savedCookie)
+  } else {
+    const result = await window.electronAPI?.getCookie()
+    if (result?.success && result.data) {
+      cookie.value = result.data
+    }
+  }
+})
 
 const themeColors = [
   { name: '抖音红', value: '#fe2c55' },
@@ -169,18 +182,20 @@ const selectSavePath = async () => {
   }
 }
 
-const saveCookie = () => {
+const saveCookie = async () => {
   if (!cookie.value.trim()) {
     ElMessage.warning('请输入 Cookie')
     return
   }
   localStorage.setItem('douyin_cookie', cookie.value)
+  await window.electronAPI?.setCookie(cookie.value)
   ElMessage.success('Cookie 已保存')
 }
 
-const clearCookie = () => {
+const clearCookie = async () => {
   cookie.value = ''
   localStorage.removeItem('douyin_cookie')
+  await window.electronAPI?.setCookie('')
   ElMessage.success('Cookie 已清除')
 }
 </script>

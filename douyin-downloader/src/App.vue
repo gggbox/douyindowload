@@ -93,15 +93,15 @@ const handleMenuSelect = (index: string) => {
 }
 
 const minimize = () => {
-  // Electron window minimize
+  window.electronAPI?.windowMinimize()
 }
 
 const maximize = () => {
-  // Electron window maximize
+  window.electronAPI?.windowMaximize()
 }
 
 const closeApp = () => {
-  // Electron window close
+  window.electronAPI?.windowClose()
 }
 
 onMounted(() => {

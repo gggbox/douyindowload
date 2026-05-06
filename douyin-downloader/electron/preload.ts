@@ -12,6 +12,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   fetchUserProfile: (url: string) => ipcRenderer.invoke('fetch-user-profile', url),
   fetchVideoList: (params: { secUid: string; cursor: number; count: number }) =>
     ipcRenderer.invoke('fetch-video-list', params),
+  setCookie: (cookie: string) => ipcRenderer.invoke('set-cookie', cookie),
+  getCookie: () => ipcRenderer.invoke('get-cookie'),
+  windowMinimize: () => ipcRenderer.invoke('window-minimize'),
+  windowMaximize: () => ipcRenderer.invoke('window-maximize'),
+  windowClose: () => ipcRenderer.invoke('window-close'),
+  windowIsMaximized: () => ipcRenderer.invoke('window-is-maximized'),
   onDownloadProgress: (callback: (progress: any) => void) => {
     ipcRenderer.on('download-progress', (_event, data) => callback(data))
   },

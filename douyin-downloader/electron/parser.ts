@@ -52,6 +52,10 @@ export class DouyinParser {
     headers.Cookie = cookie
   }
 
+  getCookie(): string {
+    return this.cookie
+  }
+
   async parse(url: string): Promise<VideoInfo> {
     const extractedUrl = this.extractUrlFromText(url)
     const cleanUrl = await this.resolveShortUrl(extractedUrl)
@@ -85,39 +89,52 @@ export class DouyinParser {
   }
 
   private async resolveShortUrl(url: string): Promise<string> {
+    if (!url.includes('v.douyin.com') && !url.includes('vt.tiktok.com')) {
+      return url
+    }
+
     try {
-      if (url.includes('v.douyin.com') || url.includes('vt.tiktok.com')) {
-        const response = await axios.get(url, {
-          maxRedirects: 5,
-          headers,
-          httpsAgent,
-          validateStatus: () => true,
-        })
-        const finalUrl = response.request?.res?.responseUrl
-        if (finalUrl && finalUrl !== url) {
-          return finalUrl
-        }
-        const location = response.headers['location']
-        if (location) {
-          return location
-        }
+      const response = await axios.get(url, {
+        maxRedirects: 0,
+        headers: {
+          ...headers,
+          Cookie: this.cookie,
+        },
+        httpsAgent,
+        validateStatus: (status) => status >= 200 && status < 400,
+      })
+
+      const location = response.headers['location']
+      if (location) {
+        return this.resolveShortUrl(location)
       }
-    } catch {
-      try {
-        const response = await axios.head(url, {
-          maxRedirects: 5,
-          headers,
-          httpsAgent,
-          validateStatus: () => true,
-        })
-        const location = response.headers['location']
-        if (location) {
-          return location
-        }
-      } catch {
-        // fallback to original url
+    } catch (error: any) {
+      if (error.response?.headers?.location) {
+        return this.resolveShortUrl(error.response.headers.location)
       }
     }
+
+    try {
+      const response = await axios.head(url, {
+        maxRedirects: 0,
+        headers: {
+          ...headers,
+          Cookie: this.cookie,
+        },
+        httpsAgent,
+        validateStatus: (status) => status >= 200 && status < 400,
+      })
+
+      const location = response.headers['location']
+      if (location) {
+        return this.resolveShortUrl(location)
+      }
+    } catch (error: any) {
+      if (error.response?.headers?.location) {
+        return this.resolveShortUrl(error.response.headers.location)
+      }
+    }
+
     return url
   }
 
@@ -126,6 +143,7 @@ export class DouyinParser {
       /video\/(\d+)/,
       /note\/(\d+)/,
       /modal_id=(\d+)/,
+      /aweme_id=(\d+)/,
       /\/(\d{19})/,
     ]
 
