@@ -186,6 +186,22 @@ const videoInfo = ref<VideoItem | null>(null)
 const parseError = ref('')
 
 const extractUrl = (text: string): string => {
+  const douyinShortUrlRegex = /https?:\/\/v\.douyin\.com\/[a-zA-Z0-9]+\/?/
+  const shortMatch = text.match(douyinShortUrlRegex)
+  if (shortMatch) return shortMatch[0]
+
+  const douyinLongUrlRegex = /https?:\/\/www\.douyin\.com\/[^\s\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]+/
+  const longMatch = text.match(douyinLongUrlRegex)
+  if (longMatch) return longMatch[0]
+
+  const tiktokUrlRegex = /https?:\/\/(?:vt\.tiktok\.com|www\.tiktok\.com)\/[^\s\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]+/
+  const tiktokMatch = text.match(tiktokUrlRegex)
+  if (tiktokMatch) return tiktokMatch[0]
+
+  const generalUrlRegex = /https?:\/\/[^\s\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]+/
+  const generalMatch = text.match(generalUrlRegex)
+  if (generalMatch) return generalMatch[0]
+
   const urlRegex = /https?:\/\/[^\s]+/
   const match = text.match(urlRegex)
   return match ? match[0] : text

@@ -53,7 +53,8 @@ export class DouyinParser {
   }
 
   async parse(url: string): Promise<VideoInfo> {
-    const cleanUrl = await this.resolveShortUrl(url)
+    const extractedUrl = this.extractUrlFromText(url)
+    const cleanUrl = await this.resolveShortUrl(extractedUrl)
     const videoId = this.extractVideoId(cleanUrl)
 
     if (videoId) {
@@ -63,11 +64,48 @@ export class DouyinParser {
     throw new Error('无法解析该链接，请确认链接是否正确')
   }
 
+  private extractUrlFromText(text: string): string {
+    const douyinShortUrlRegex = /https?:\/\/v\.douyin\.com\/[a-zA-Z0-9]+\/?/
+    const shortMatch = text.match(douyinShortUrlRegex)
+    if (shortMatch) return shortMatch[0]
+
+    const douyinLongUrlRegex = /https?:\/\/www\.douyin\.com\/[^\s\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]+/
+    const longMatch = text.match(douyinLongUrlRegex)
+    if (longMatch) return longMatch[0]
+
+    const tiktokUrlRegex = /https?:\/\/(?:vt\.tiktok\.com|www\.tiktok\.com)\/[^\s\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]+/
+    const tiktokMatch = text.match(tiktokUrlRegex)
+    if (tiktokMatch) return tiktokMatch[0]
+
+    const generalUrlRegex = /https?:\/\/[^\s\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]+/
+    const generalMatch = text.match(generalUrlRegex)
+    if (generalMatch) return generalMatch[0]
+
+    return text.trim()
+  }
+
   private async resolveShortUrl(url: string): Promise<string> {
     try {
       if (url.includes('v.douyin.com') || url.includes('vt.tiktok.com')) {
+        const response = await axios.get(url, {
+          maxRedirects: 5,
+          headers,
+          httpsAgent,
+          validateStatus: () => true,
+        })
+        const finalUrl = response.request?.res?.responseUrl
+        if (finalUrl && finalUrl !== url) {
+          return finalUrl
+        }
+        const location = response.headers['location']
+        if (location) {
+          return location
+        }
+      }
+    } catch {
+      try {
         const response = await axios.head(url, {
-          maxRedirects: 1,
+          maxRedirects: 5,
           headers,
           httpsAgent,
           validateStatus: () => true,
@@ -76,9 +114,9 @@ export class DouyinParser {
         if (location) {
           return location
         }
+      } catch {
+        // fallback to original url
       }
-    } catch {
-      // fallback to original url
     }
     return url
   }
