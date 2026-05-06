@@ -49,17 +49,26 @@
     </div>
 
     <div class="browser-content">
-      <div class="webview-container" ref="webviewContainer">
+      <div class="webview-container">
         <webview
+          v-if="isElectron"
           ref="browserWebview"
           :src="displayUrl"
           class="browser-webview"
           allowpopups
           :useragent="userAgent"
-          @did-navigate="onNavigate"
-          @did-navigate-in-page="onNavigateInPage"
-          @did-finish-load="onPageLoad"
+          @did-navigate="onWebviewNavigate"
+          @did-navigate-in-page="onWebviewNavigateInPage"
+          @did-finish-load="onWebviewPageLoad"
         ></webview>
+        <iframe
+          v-else
+          ref="browserFrame"
+          :src="displayUrl"
+          class="browser-iframe"
+          sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+          @load="onIframeLoad"
+        ></iframe>
       </div>
 
       <div class="side-panel" :class="{ open: sidePanelOpen }">
@@ -141,7 +150,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useAppStore } from '@/stores/app'
 import type { VideoItem } from '@/stores/app'
@@ -150,12 +159,14 @@ const store = useAppStore()
 const currentUrl = ref('https://www.douyin.com')
 const displayUrl = ref('https://www.douyin.com')
 const browserWebview = ref<any>(null)
-const webviewContainer = ref<HTMLElement | null>(null)
+const browserFrame = ref<HTMLIFrameElement | null>(null)
 const canGoBack = ref(false)
 const canGoForward = ref(false)
 const parsing = ref(false)
 const sidePanelOpen = ref(false)
 const parsedVideo = ref<VideoItem | null>(null)
+
+const isElectron = computed(() => !!window.electronAPI)
 
 const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 
@@ -177,20 +188,38 @@ const navigateTo = (url: string) => {
 }
 
 const goBack = () => {
-  if (browserWebview.value) {
+  if (isElectron.value && browserWebview.value && typeof browserWebview.value.goBack === 'function') {
     browserWebview.value.goBack()
+  } else if (browserFrame.value) {
+    try {
+      browserFrame.value.contentWindow?.history.back()
+      canGoForward.value = true
+    } catch {
+      // cross-origin
+    }
   }
 }
 
 const goForward = () => {
-  if (browserWebview.value) {
+  if (isElectron.value && browserWebview.value && typeof browserWebview.value.goForward === 'function') {
     browserWebview.value.goForward()
+  } else if (browserFrame.value) {
+    try {
+      browserFrame.value.contentWindow?.history.forward()
+    } catch {
+      // cross-origin
+    }
   }
 }
 
 const refreshPage = () => {
-  if (browserWebview.value) {
+  if (isElectron.value && browserWebview.value && typeof browserWebview.value.reload === 'function') {
     browserWebview.value.reload()
+  } else {
+    displayUrl.value = ''
+    setTimeout(() => {
+      displayUrl.value = currentUrl.value
+    }, 50)
   }
 }
 
@@ -198,21 +227,36 @@ const goToDouyin = () => {
   navigateTo('https://www.douyin.com')
 }
 
-const onNavigate = (event: any) => {
+const onWebviewNavigate = (event: any) => {
   currentUrl.value = event.url
-  canGoBack.value = browserWebview.value?.canGoBack() || false
-  canGoForward.value = browserWebview.value?.canGoForward() || false
+  if (browserWebview.value && typeof browserWebview.value.canGoBack === 'function') {
+    canGoBack.value = browserWebview.value.canGoBack()
+    canGoForward.value = browserWebview.value.canGoForward()
+  }
 }
 
-const onNavigateInPage = (event: any) => {
+const onWebviewNavigateInPage = (event: any) => {
   if (event.url) {
     currentUrl.value = event.url
   }
 }
 
-const onPageLoad = () => {
-  canGoBack.value = browserWebview.value?.canGoBack() || false
-  canGoForward.value = browserWebview.value?.canGoForward() || false
+const onWebviewPageLoad = () => {
+  if (browserWebview.value && typeof browserWebview.value.canGoBack === 'function') {
+    canGoBack.value = browserWebview.value.canGoBack()
+    canGoForward.value = browserWebview.value.canGoForward()
+  }
+}
+
+const onIframeLoad = () => {
+  try {
+    const frameUrl = browserFrame.value?.contentWindow?.location.href
+    if (frameUrl && frameUrl !== 'about:blank') {
+      currentUrl.value = frameUrl
+    }
+  } catch {
+    // cross-origin, keep current url
+  }
 }
 
 const parseCurrentPage = async () => {
@@ -413,7 +457,8 @@ const formatNumber = (num: number): string => {
   flex: 1;
   position: relative;
 
-  .browser-webview {
+  .browser-webview,
+  .browser-iframe {
     width: 100%;
     height: 100%;
     border: none;
